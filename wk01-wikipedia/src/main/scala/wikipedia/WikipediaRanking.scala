@@ -1,31 +1,36 @@
 package wikipedia
 
-import org.apache.spark.SparkConf
-import org.apache.spark.SparkContext
-import org.apache.spark.SparkContext._
-
+import org.apache.spark.{SparkConf, SparkContext}
 import org.apache.spark.rdd.RDD
 
 case class WikipediaArticle(title: String, text: String)
 
-object WikipediaRanking {
+object WikipediaRanking
+{
 
   val langs = List(
     "JavaScript", "Java", "PHP", "Python", "C#", "C++", "Ruby", "CSS",
     "Objective-C", "Perl", "Scala", "Haskell", "MATLAB", "Clojure", "Groovy")
 
-  val conf: SparkConf = ???
-  val sc: SparkContext = ???
+  val conf: SparkConf = new SparkConf()
+  val sc: SparkContext = new SparkContext("local[4]", "wikipedia", conf)
   // Hint: use a combination of `sc.textFile`, `WikipediaData.filePath` and `WikipediaData.parse`
-  val wikiRdd: RDD[WikipediaArticle] = ???
+  val textFile: RDD[String] = sc.textFile(WikipediaData.filePath)
+  val wikiRdd: RDD[WikipediaArticle] = textFile.map(x => WikipediaData.parse(x))
 
   /** Returns the number of articles on which the language `lang` occurs.
-   *  Hint1: consider using method `aggregate` on RDD[T].
-   *  Hint2: should you count the "Java" language when you see "JavaScript"?
-   *  Hint3: the only whitespaces are blanks " "
-   *  Hint4: no need to search in the title :)
-   */
-  def occurrencesOfLang(lang: String, rdd: RDD[WikipediaArticle]): Int = ???
+    * Hint1: consider using method `aggregate` on RDD[T].
+    * Hint2: should you count the "Java" language when you see "JavaScript"?
+    * Hint3: the only whitespaces are blanks " "
+    * Hint4: no need to search in the title :)
+    */
+  def occurrencesOfLang(lang: String, rdd: RDD[WikipediaArticle]): Int =
+  {
+    rdd.aggregate[Int](0) (
+      (acc: Int, value: WikipediaArticle) => acc + (if(value.text.contains(lang + " ")) 1 else 0),
+      (len: Int, acc1: Int) => len + acc1
+    )
+  }
 
   /* (1) Use `occurrencesOfLang` to compute the ranking of the languages
    *     (`val langs`) by determining the number of Wikipedia articles that
@@ -59,7 +64,8 @@ object WikipediaRanking {
    */
   def rankLangsReduceByKey(langs: List[String], rdd: RDD[WikipediaArticle]): List[(String, Int)] = ???
 
-  def main(args: Array[String]) {
+  def main(args: Array[String])
+  {
 
     /* Languages ranked according to (1) */
     val langsRanked: List[(String, Int)] = timed("Part 1: naive ranking", rankLangs(langs, wikiRdd))
@@ -79,7 +85,9 @@ object WikipediaRanking {
   }
 
   val timing = new StringBuffer
-  def timed[T](label: String, code: => T): T = {
+
+  def timed[T](label: String, code: => T): T =
+  {
     val start = System.currentTimeMillis()
     val result = code
     val stop = System.currentTimeMillis()
