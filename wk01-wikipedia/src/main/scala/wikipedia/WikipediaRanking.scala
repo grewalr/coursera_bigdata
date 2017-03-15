@@ -13,7 +13,7 @@ object WikipediaRanking
     "Objective-C", "Perl", "Scala", "Haskell", "MATLAB", "Clojure", "Groovy")
 
   val conf: SparkConf = new SparkConf()
-  val sc: SparkContext = new SparkContext("local[4]", "wikipedia", conf)
+  val sc: SparkContext = new SparkContext("local[*]", "wikipedia", conf)
   // Hint: use a combination of `sc.textFile`, `WikipediaData.filePath` and `WikipediaData.parse`
   val textFile: RDD[String] = sc.textFile(WikipediaData.filePath)
   val wikiRdd: RDD[WikipediaArticle] = textFile.map(x => WikipediaData.parse(x))
@@ -40,7 +40,16 @@ object WikipediaRanking
    *   Note: this operation is long-running. It can potentially run for
    *   several seconds.
    */
-  def rankLangs(langs: List[String], rdd: RDD[WikipediaArticle]): List[(String, Int)] = ???
+  def rankLangs(langs: List[String], rdd: RDD[WikipediaArticle]): List[(String, Int)] =
+  {
+    rdd.cache()
+    langs
+        .map(x => (x, occurrencesOfLang(x, rdd)))
+        .groupBy(_._2)
+        .toList
+        .sortBy(_._2.head._1)
+        .map(e => e._2.head._1 -> e._1)
+  }
 
   /* Compute an inverted index of the set of articles, mapping each language
    * to the Wikipedia pages in which it occurs.
@@ -69,6 +78,7 @@ object WikipediaRanking
 
     /* Languages ranked according to (1) */
     val langsRanked: List[(String, Int)] = timed("Part 1: naive ranking", rankLangs(langs, wikiRdd))
+    println(langsRanked.take(100))
 
     /* An inverted index mapping languages to wikipedia pages on which they appear */
     def index: RDD[(String, Iterable[WikipediaArticle])] = makeIndex(langs, wikiRdd)
