@@ -7,7 +7,6 @@ case class WikipediaArticle(title: String, text: String)
 
 object WikipediaRanking
 {
-
   val langs = List(
     "JavaScript", "Java", "PHP", "Python", "C#", "C++", "Ruby", "CSS",
     "Objective-C", "Perl", "Scala", "Haskell", "MATLAB", "Clojure", "Groovy")
@@ -47,7 +46,7 @@ object WikipediaRanking
         .map(x => (x, occurrencesOfLang(x, rdd)))
         .groupBy(_._2)
         .toList
-        .sortBy(_._2.head._1)
+        .sortBy(_._2.head._2).reverse
         .map(e => e._2.head._1 -> e._1)
   }
 
